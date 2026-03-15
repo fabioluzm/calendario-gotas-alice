@@ -64,12 +64,50 @@ const monthData = {
 };
 
 // Column definitions used to build the table header and rows dynamically
+// Columns can have either a `subtitle` (string) or `subcolumns` (array of objects)
 const tableColumns = [
-  { icon: '🛀', title: 'Banho', subtitle: 'dia sim/dia não' },
-  { icon: '💧', title: 'BioGaia', subtitle: '5 gotas' },
-  { icon: '☀️', title: 'Nancare', subtitle: '2 gotas' },
-  { icon: '💪', title: 'Ferro', subtitle: '15 gotas' },
-  { icon: '🙌', title: 'Massagem', subtitle: 'colicas/cocó' },
+  {
+    icon: '',
+    title: '',
+    subcolumns: [{ icon: '🛀', title: 'Banho', subtitle: 'dia sim/dia não' }],
+  },
+  {
+    icon: '💦',
+    title: 'Gotas',
+    subcolumns: [
+      {
+        icon: '💧',
+        title: 'Biogaia',
+        subtitle: '5/dia',
+      },
+      {
+        icon: '☀️',
+        title: 'Nancare',
+        subtitle: '2/dia',
+      },
+      {
+        icon: '💪',
+        title: 'Ferro',
+        subtitle: '15/dia',
+      },
+    ],
+  },
+  {
+    icon: '🙌',
+    title: 'Massagem',
+    subcolumns: [
+      {
+        icon: '💨',
+        title: 'colicas',
+        subtitle: 'anti-ciclonicas',
+      },
+      {
+        icon: '🌙',
+        title: 'relax',
+        subtitle: 'relaxante',
+      },
+    ],
+  },
 ];
 
 function leapYear(year) {
@@ -121,29 +159,79 @@ function generateTable(days) {
   const tableHead = document.getElementById('table-head');
   const tableBody = document.getElementById('table-body');
 
-  // Build header from `tableColumns` (first column is always the day)
-  let headHtml = '<tr class="text-pink-600 border-b border-pink-100">';
-  headHtml += '<th class="py-1 px-2 w-20 text-md align-middle">Dia</th>';
+  // Build a two-row header to support columns with `subcolumns`.
+  // First row contains the parent headers (some may span multiple subcolumns),
+  // second row contains the subcolumn headers (only for columns that define them).
+  let firstRow = '<tr class="text-pink-600 border-b border-pink-100">';
+  firstRow +=
+    '<th class="py-1 px-2 w-20 text-md align-middle" rowspan="2">Dia</th>';
   tableColumns.forEach((col) => {
-    headHtml += `<th class="py-1 px-2 text-center align-middle">`;
-    headHtml += `<div class="text-md font-bold">${col.icon} ${col.title}</div>`;
-    headHtml += `<div class="text-[9px] text-pink-400 font-normal leading-none">(${col.subtitle})</div>`;
-    headHtml += `</th>`;
+    if (
+      col.subcolumns &&
+      Array.isArray(col.subcolumns) &&
+      col.subcolumns.length > 0
+    ) {
+      firstRow += `<th class="py-1 px-2 text-center align-middle" colspan="${col.subcolumns.length}">`;
+      firstRow += `<div class="text-md font-bold">${col.icon} ${col.title}</div>`;
+      firstRow += `</th>`;
+    } else {
+      firstRow += `<th class="py-1 px-2 text-center align-middle" rowspan="2">`;
+      firstRow += `<div class="text-md font-bold">${col.icon} ${col.title}</div>`;
+      if (col.subtitle) {
+        firstRow += `<div class="text-[9px] text-pink-400 font-normal leading-none">(${col.subtitle})</div>`;
+      }
+      firstRow += `</th>`;
+    }
   });
-  headHtml += '</tr>';
+  firstRow += '</tr>';
 
-  tableHead.innerHTML = headHtml;
+  let secondRow = '<tr class="text-pink-600 border-b border-pink-100">';
+  tableColumns.forEach((col) => {
+    if (
+      col.subcolumns &&
+      Array.isArray(col.subcolumns) &&
+      col.subcolumns.length > 0
+    ) {
+      col.subcolumns.forEach((sub) => {
+        const sTitle = sub && sub.title ? sub.title : '';
+        const sIcon = sub && sub.icon ? sub.icon + ' ' : '';
+        const sSubtitle = sub && sub.subtitle ? sub.subtitle : '';
+        secondRow += `<th class="py-1 px-2 text-center align-middle">`;
+        if (sTitle || sIcon) {
+          secondRow += `<div class="text-md font-semibold">${sIcon}${sTitle}</div>`;
+        } else {
+          secondRow += `<div class="text-md font-semibold">&nbsp;</div>`;
+        }
+        if (sSubtitle) {
+          secondRow += `<div class="text-[9px] text-pink-400 font-normal leading-none">(${sSubtitle})</div>`;
+        }
+        secondRow += `</th>`;
+      });
+    }
+  });
+  secondRow += '</tr>';
 
-  // Clear body and generate rows based on header length
+  tableHead.innerHTML = firstRow + secondRow;
+
+  // Clear body and generate rows matching header column count
   tableBody.innerHTML = '';
   const paddingClass = 'pt-2';
   for (let i = 1; i <= days; i++) {
-    const dayLabel = String(i).padStart(2, '0'); // Formatar o dia com zero à esquerda se menor que 10
+    const dayLabel = String(i).padStart(2, '0');
     let cells = `<td class="${paddingClass} px-2 font-bold text-gray-600 text-md row-day-cell">${dayLabel}</td>`;
-    // one cell per defined column
-    for (let c = 0; c < tableColumns.length; c++) {
-      cells += `<td class="${paddingClass} px-2 text-center row-day-cell"><div class="checkbox-custom"></div></td>`;
-    }
+    tableColumns.forEach((col) => {
+      if (
+        col.subcolumns &&
+        Array.isArray(col.subcolumns) &&
+        col.subcolumns.length > 0
+      ) {
+        col.subcolumns.forEach(() => {
+          cells += `<td class="${paddingClass} px-2 text-center row-day-cell"><div class="checkbox-custom"></div></td>`;
+        });
+      } else {
+        cells += `<td class="${paddingClass} px-2 text-center row-day-cell"><div class="checkbox-custom"></div></td>`;
+      }
+    });
     const row = `<tr class="border-b border-pink-50 hover:bg-pink-50 transition-colors">${cells}</tr>`;
     tableBody.innerHTML += row;
   }
